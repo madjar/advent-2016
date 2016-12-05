@@ -8,8 +8,12 @@ main = do
   Just input <- parseFromFile parser "input1"
   let allPos = map snd . scanl (flip applyInstruction) (N, (0, 0)) $ (makeAtomic input)
   print allPos
-  print (firstDouble allPos)
+  --print (firstDouble allPos)
+  putStr "First question: "
+  print (manhattan (last allPos))
+  putStr "Second question: "
   print (manhattan (firstDouble allPos))
+
 
 makeAtomic = concatMap (atomic)
   where atomic (d, n) = (d, 1) : replicate (fromInteger n - 1) (No, 1)

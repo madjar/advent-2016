@@ -1,5 +1,5 @@
 #!/usr/bin/env stack
--- stack --install-ghc runghc --package cryptonite --package lens
+-- stack --install-ghc runghc --package cryptonite --package lens --package concurrent-output --package async
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -10,17 +10,33 @@ import System.IO
 import Control.Lens
 import Data.Char
 import Data.List
+import System.Console.Regions
+import Control.Concurrent.Async
 
-main = mapM_ putStrLn (compute' "ugkcyxxp")
+main = let hashes = interestingHashes "ugkcyxxp"
+       in displayConsoleRegions $ firstPart hashes `concurrently` secondPart hashes
 
-displayFirstStep = do
-  hSetBuffering stdout NoBuffering
-  putStrLn (compute "ugkcyxxp")
+firstPart :: [String] -> IO ()
+firstPart hashes =
+  withConsoleRegion' Linear $
+  \r -> mapM_ (appendConsoleRegion r . (\c ->[c])) (firstPassword hashes)
 
+secondPart hashes =
+  withConsoleRegion' Linear $
+  \r -> mapM_ (setConsoleRegion r) (secondPassword hashes)
 
-compute = take 8 . map (!! 5) . interestingHashes
+withConsoleRegion' layout a = withConsoleRegion layout $ \r -> a r <* (finishConsoleRegion r =<< getConsoleRegion r)
 
-compute' = takeUntil fullPassword . scanl updatePassword "________" . interestingHashes
+-- displayFirstStep = do
+--   hSetBuffering stdout NoBuffering
+--   putStrLn (compute "ugkcyxxp")
+
+-- compute = firstPassword . interestingHashes
+-- compute' = secondPassword . interestingHashes
+
+firstPassword = take 8 . map (!! 5)
+
+secondPassword = takeUntil fullPassword . scanl updatePassword "________"
   where takeUntil p = foldr (\x ys -> x : if p x then [] else ys) []
         fullPassword = not . ('_' `elem`)
 
